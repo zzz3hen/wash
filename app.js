@@ -27,7 +27,6 @@ let state = {
   logs: [],
   demoMode: false,
   filterFloor: "all",
-  filterStatus: "all",
   activeModalMachineId: null
 };
 
@@ -300,9 +299,8 @@ function renderMachineGrid() {
   if (!grid) return;
 
   const filtered = state.machines.filter(m => {
-    const floorMatches = state.filterFloor === "all" || m.floor.includes(state.filterFloor);
-    const statusMatches = state.filterStatus === "all" || m.status === state.filterStatus;
-    return floorMatches && statusMatches;
+    if (state.filterFloor === "all") return true;
+    return m.floor.includes(state.filterFloor);
   });
 
   if (filtered.length === 0) {
@@ -323,7 +321,6 @@ function resetFilter() {
   const floorSelect = document.getElementById("floorFilter");
   if (floorSelect) floorSelect.value = "all";
   state.filterFloor = "all";
-  state.filterStatus = "all";
   renderMachineGrid();
 }
 
@@ -509,8 +506,8 @@ function confirmStartMachine() {
   const cycleMinutes = cycleSelect ? parseInt(cycleSelect.value, 10) : 30;
 
   const now = Date.now();
-  // 示範模式統一縮短為 30 秒，方便現場快速驗證洗畢流程。
-  const durationSec = state.demoMode ? 30 : (cycleMinutes * 60);
+  // 若為示範快進模式，每 30 分鐘縮短為 30 秒 (即 1秒 = 1分鐘)
+  const durationSec = state.demoMode ? cycleMinutes : (cycleMinutes * 60);
 
   m.status = "running";
   m.durationMinutes = cycleMinutes;
@@ -652,8 +649,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (floorFilter) {
     floorFilter.addEventListener("change", (e) => {
       state.filterFloor = e.target.value;
-      state.filterStatus = "all";
-      document.querySelectorAll(".stat-card").forEach(card => card.classList.remove("is-active"));
       renderMachineGrid();
     });
   }
@@ -673,20 +668,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 狀態卡片點選篩選
   document.querySelectorAll(".stat-card").forEach(card => {
-    const selectStatus = () => {
+    card.addEventListener("click", () => {
+      // 點選統計卡片時可重置樓層篩選
       if (floorFilter) floorFilter.value = "all";
       state.filterFloor = "all";
-      state.filterStatus = card.dataset.filter || "all";
-      document.querySelectorAll(".stat-card").forEach(item => item.classList.remove("is-active"));
-      card.classList.add("is-active");
       renderMachineGrid();
-    };
-    card.addEventListener("click", selectStatus);
-    card.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        selectStatus();
-      }
     });
   });
 

@@ -41,7 +41,7 @@
 ### 方式二：使用本機 HTTP 伺服器
 在終端機中切換到本專案目錄：
 ```bash
-cd /workspaces/wash
+cd /Users/zhen/.gemini/antigravity/scratch/dorm-laundry-tracker
 ```
 啟動內建伺服器（macOS 內建 Ruby）：
 ```bash
