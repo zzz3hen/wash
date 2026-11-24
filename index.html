@@ -14,12 +14,12 @@
         <span class="brand-icon">🧺</span>
         <div>
           <h1 class="brand-title">宿洗通 DormWash</h1>
-          <p class="brand-subtitle">宿舍洗衣機即時狀態看板與洗畢提醒</p>
+          <p class="brand-subtitle">宿舍洗衣房即時狀態看板與洗畢提醒</p>
         </div>
       </div>
       <div class="nav-actions">
         <div class="demo-mode-pill">
-          <label for="demoModeSwitch" class="toggle-label" title="切換為 30 秒倒數，方便課堂展示與測試">
+          <label for="demoModeSwitch" class="toggle-label" title="切換為秒數快進倒數，方便課堂展示與測試">
             <span class="toggle-text">⏱️ 示範快進模式</span>
             <input type="checkbox" id="demoModeSwitch">
             <span class="toggle-slider"></span>
@@ -39,19 +39,19 @@
     <!-- 狀態摘要條 -->
     <section class="stats-bar" aria-label="機台狀態統計">
       <div class="stat-card" data-filter="all">
-        <div class="stat-value" id="statTotal">6</div>
-        <div class="stat-label">全部機台</div>
+        <div class="stat-value" id="statTotal">10</div>
+        <div class="stat-label">全部機台 (10台)</div>
       </div>
       <div class="stat-card stat-idle" data-filter="idle">
-        <div class="stat-value" id="statIdle">4</div>
+        <div class="stat-value" id="statIdle">10</div>
         <div class="stat-label">🟢 空閒有位</div>
       </div>
       <div class="stat-card stat-running" data-filter="running">
-        <div class="stat-value" id="statRunning">1</div>
-        <div class="stat-label">🟡 洗滌運轉中</div>
+        <div class="stat-value" id="statRunning">0</div>
+        <div class="stat-label">🟡 運轉中</div>
       </div>
       <div class="stat-card stat-finished" data-filter="finished">
-        <div class="stat-value" id="statFinished">1</div>
+        <div class="stat-value" id="statFinished">0</div>
         <div class="stat-label">🔔 待取衣服</div>
       </div>
       <div class="stat-card stat-maintenance" data-filter="maintenance">
@@ -60,23 +60,22 @@
       </div>
     </section>
 
-    <!-- 篩選與提示 -->
+    <!-- 分類篩選與提示 (取消樓層，全部集中在洗衣房，可切換洗衣機 / 烘衣機) -->
     <section class="filter-bar">
       <div class="filter-group">
-        <label for="floorFilter">📍 樓層/區域篩選：</label>
-        <select id="floorFilter" class="form-select">
-          <option value="all">所有樓層 (全部)</option>
-          <option value="2F">男宿 2F 洗衣間</option>
-          <option value="3F">男宿 3F 洗衣間</option>
-          <option value="4F">男宿 4F 洗衣間</option>
+        <label for="typeFilter">🏷️ 機台類別篩選：</label>
+        <select id="typeFilter" class="form-select">
+          <option value="all">全部機台 (6台洗衣機 ＋ 4台烘衣機)</option>
+          <option value="washer">🌀 洗衣機專區 (共 6 台・固定 30 分鐘)</option>
+          <option value="dryer">♨️ 烘衣機專區 (共 4 台・可選 10～100 分鐘)</option>
         </select>
       </div>
       <div class="live-sync-badge" title="多分頁即時同步中">
-        <span class="sync-dot"></span> 跨分頁即時狀態同步中
+        <span class="sync-dot"></span> 📍 宿舍洗衣房即時狀態同步中
       </div>
     </section>
 
-    <!-- 洗衣機卡片網格 -->
+    <!-- 洗衣機 / 烘衣機卡片網格 -->
     <section>
       <div id="machineGrid" class="machine-grid" aria-live="polite">
         <!-- 機台卡片由 JavaScript 動態渲染 -->
@@ -86,28 +85,28 @@
     <!-- 使用流程指引 -->
     <section class="guide-section">
       <div class="guide-header">
-        <h2>💡 使用教學與功能特色</h2>
+        <h2>💡 宿舍洗衣房使用指引</h2>
       </div>
       <div class="guide-steps">
         <div class="guide-step">
           <div class="step-num">1</div>
           <div class="step-content">
             <h3>查看空閒狀態</h3>
-            <p>綠色標記「空閒有位」代表可以直接使用，不需白跑一趟洗衣間排隊。</p>
+            <p><strong>6 台洗衣機</strong>與<strong>4 台烘衣機</strong>集中於宿舍洗衣房，綠色代表可直接使用，不用白跑排隊。</p>
           </div>
         </div>
         <div class="guide-step">
           <div class="step-num">2</div>
           <div class="step-content">
-            <h3>選取號碼並啟動</h3>
-            <p>點選「開始使用」自動計算並倒數 30 分鐘，狀態即時同步給全體住宿生。</p>
+            <h3>洗衣固定半小時 / 烘衣自選時間</h3>
+            <p>洗衣機自動設定 30 分鐘；烘衣機可依衣物量自由選擇 10～100 分鐘（每 10 分鐘一單位）。</p>
           </div>
         </div>
         <div class="guide-step">
           <div class="step-num">3</div>
           <div class="step-content">
-            <h3>洗畢提醒與取衣釋放</h3>
-            <p>時間到自動播放提醒音效與通知；取完衣服點選「結束使用」，立即釋放位置。</p>
+            <h3>洗畢提醒與結束釋放</h3>
+            <p>時間到自動發出悅耳叮咚提示聲與桌面通知；拿完衣服點「結束使用」立即釋放位置！</p>
           </div>
         </div>
       </div>
@@ -129,7 +128,7 @@
   <div id="startModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="startModalTitle">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 id="startModalTitle">🧺 啟動洗衣機</h3>
+        <h3 id="startModalTitle">🧺 啟動機台</h3>
         <button class="modal-close" id="closeStartModalBtn">&times;</button>
       </div>
       <div class="modal-body">
@@ -140,17 +139,15 @@
           <input type="text" id="userNameInput" class="form-input" placeholder="例如：302號房 阿明" maxlength="20">
         </div>
 
-        <div class="form-group">
-          <label for="cycleSelect">洗滌行程：</label>
+        <div class="form-group" id="cycleGroup">
+          <label for="cycleSelect" id="cycleLabel">使用時間：</label>
           <select id="cycleSelect" class="form-select">
-            <option value="30">標準洗滌 (30 分鐘)</option>
-            <option value="45">深層洗滌 (45 分鐘)</option>
-            <option value="15">快洗脫水 (15 分鐘)</option>
+            <!-- 根據洗衣機或烘衣機由 JS 動態生成選項 -->
           </select>
         </div>
 
         <div class="demo-speed-notice" id="demoNoticeBox">
-          ⚡ <strong>已開啟示範快進模式：</strong> 計時將以 30 秒為單位倒數，方便現場 Demo 與測試！
+          ⚡ <strong>已開啟示範快進模式：</strong> 計時將以「秒」為單位倒數（1秒＝1分鐘），方便現場 Demo 快速驗證提醒音效與狀態轉換！
         </div>
       </div>
       <div class="modal-footer">
@@ -164,51 +161,42 @@
   <div id="adminModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
     <div class="modal-card modal-lg">
       <div class="modal-header">
-        <h3 id="adminModalTitle">⚙️ 機台資料管理 (CRUD Panel)</h3>
+        <h3 id="adminModalTitle">⚙️ 洗衣房機台資料管理 (CRUD Panel)</h3>
         <button class="modal-close" id="closeAdminModalBtn">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="text-muted">此面板符合期末專題指南「管理／資料功能」加分項目，可進行機台資料之<strong>新增、查看、編輯、刪除</strong>。</p>
+        <p class="text-muted">符合期末專題指南「管理／資料功能」加分項目，可進行洗衣房機台之<strong>新增、查看、編輯維修狀態、刪除</strong>。</p>
         
         <!-- 新增機台表單 -->
         <div class="admin-form-box">
-          <h4>➕ 新增洗衣機 / 烘衣機</h4>
+          <h4>➕ 新增機台</h4>
           <form id="addMachineForm" class="admin-form-grid">
             <div class="form-group">
               <label for="newMachineName">機台名稱/編號：</label>
-              <input type="text" id="newMachineName" class="form-input" placeholder="例如：#7 洗衣機" required>
-            </div>
-            <div class="form-group">
-              <label for="newMachineFloor">所在樓層/區域：</label>
-              <select id="newMachineFloor" class="form-select" required>
-                <option value="2F">男宿 2F 洗衣間</option>
-                <option value="3F">男宿 3F 洗衣間</option>
-                <option value="4F">男宿 4F 洗衣間</option>
-                <option value="女宿1F">女宿 1F 洗衣間</option>
-              </select>
+              <input type="text" id="newMachineName" class="form-input" placeholder="例如：#7 洗衣機 或 #5 烘衣機" required>
             </div>
             <div class="form-group">
               <label for="newMachineType">機台類型：</label>
               <select id="newMachineType" class="form-select">
-                <option value="washer">洗衣機 (Washer)</option>
-                <option value="dryer">烘衣機 (Dryer)</option>
+                <option value="washer">🌀 洗衣機 (固定 30 分鐘)</option>
+                <option value="dryer">♨️ 烘衣機 (可選 10～100 分鐘)</option>
               </select>
             </div>
             <div class="form-group form-action-col">
-              <button type="submit" class="btn btn-primary" style="margin-top:24px;">➕ 新增機台</button>
+              <button type="submit" class="btn btn-primary" style="margin-top:24px;">➕ 新增至洗衣房</button>
             </div>
           </form>
         </div>
 
         <!-- 機台清單管理表格 -->
         <div class="admin-table-box">
-          <h4>📋 現有機台資料清單 (可編輯狀態或刪除)</h4>
+          <h4>📋 洗衣房現有機台清單 (可編輯狀態或刪除)</h4>
           <div class="table-responsive">
             <table class="admin-table">
               <thead>
                 <tr>
                   <th>編號名稱</th>
-                  <th>樓層位置</th>
+                  <th>位置</th>
                   <th>類型</th>
                   <th>目前狀態</th>
                   <th>狀態操作</th>
@@ -223,7 +211,7 @@
         </div>
 
         <div class="admin-danger-zone">
-          <button id="resetDefaultsBtn" class="btn btn-outline-danger">🔄 重設為原廠預設機台資料</button>
+          <button id="resetDefaultsBtn" class="btn btn-outline-danger">🔄 重設為預設機台 (6台洗衣機 ＋ 4台烘衣機)</button>
         </div>
       </div>
       <div class="modal-footer">
@@ -234,10 +222,11 @@
 
   <footer class="footer">
     <div class="container footer-content">
-      <p>© 2026 宿舍洗衣機即時看板小組 (DormWash Project). 自然科學與人工智慧課程期末專題.</p>
+      <p>© 2026 宿舍洗衣房即時看板小組 (DormWash Project). 自然科學與人工智慧課程期末專題.</p>
       <p class="footer-links">
-        <span>支援離線與多分頁即時同調</span>・
-        <span>支援 Web Audio 提示音效</span>・
+        <span>6台洗衣機 (30分)</span>・
+        <span>4台烘衣機 (10~100分)</span>・
+        <span>無樓層集中洗衣房</span>・
         <span>符合期末加分規範</span>
       </p>
     </div>

@@ -354,6 +354,16 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
+/* Dryer visual distinction */
+.dryer-body {
+  background: linear-gradient(145deg, #fff7ed, #ffedd5);
+  border-color: #fed7aa;
+}
+.dryer-drum {
+  background: radial-gradient(circle, #fdba74 0%, #f97316 65%, #ea580c 100%) !important;
+  border-color: #fdba74 !important;
+}
+
 /* Status-specific card borders */
 .machine-card.status-idle {
   border-top: 5px solid var(--success);
