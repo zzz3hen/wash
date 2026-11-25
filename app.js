@@ -21,19 +21,7 @@ const firebaseConfig = {
 
 // 預設機台資料（6 台洗衣機 ＋ 4 台烘衣機）
 const DEFAULT_MACHINES = [
-  // each machine can have optional pin (string) and helper (object)
-
-  { id: "w-1", name: "#1 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null, pin: null, helper: null },
-  { id: "w-2", name: "#2 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null, pin: null, helper: null },
-  { id: "w-3", name: "#3 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null, pin: null, helper: null },
-  { id: "w-4", name: "#4 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null, pin: null, helper: null },
-  { id: "w-5", name: "#5 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null, pin: null, helper: null },
-  { id: "w-6", name: "#6 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null, pin: null, helper: null },
-
-  { id: "d-1", name: "#1 烘衣機", location: "宿舍洗衣房", type: "dryer", status: "idle", durationMinutes: 40, startedAt: null, endsAt: null, user: null, pin: null, helper: null },
-  { id: "d-2", name: "#2 烘衣機", location: "宿舍洗衣房", type: "dryer", status: "idle", durationMinutes: 40, startedAt: null, endsAt: null, user: null, pin: null, helper: null },
-  { id: "d-3", name: "#3 烘衣機", location: "宿舍洗衣房", type: "dryer", status: "idle", durationMinutes: 40, startedAt: null, endsAt: null, user: null, pin: null, helper: null },
-  { id: "d-4", name: "#4 烘衣機", location: "宿舍洗衣房", type: "dryer", status: "idle", durationMinutes: 40, startedAt: null, endsAt: null, user: null, pin: null, helper: null },
+  { id: "w-1", name: "#1 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null },
   { id: "w-2", name: "#2 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null },
   { id: "w-3", name: "#3 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null },
   { id: "w-4", name: "#4 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null },
@@ -290,29 +278,6 @@ function timerTick() {
   updateSummaryStats();
 }
 
-// Helper function when someone assists after finish
-function helpRetrieve(machineId) {
-  const m = state.machines.find(item => item.id === machineId);
-  if (!m) return;
-  const helperName = prompt("請輸入協助者姓名 (例如：阿明)");
-  if (!helperName) return;
-  // Record helper info
-  m.helper = { name: helperName, time: Date.now() };
-  // Notify original user if possible
-  if (m.user) {
-    sendDesktopNotification(`🧺 ${m.name} 已取出衣服`, `${helperName} 已協助取出衣服，請盡速領取。`);
-  }
-  addLog(`已幫 ${helperName} 拿出衣服 (${m.name})`);
-  // Reset machine to idle
-  m.status = "idle";
-  m.startedAt = null;
-  m.endsAt = null;
-  m.user = null;
-  m.pin = null;
-  m.helper = null;
-  renderAll();
-  saveStateToCloud();
-}
 /* ================= 畫面渲染 ================= */
 function renderAll() {
   renderMachineGrid();
@@ -383,31 +348,7 @@ function renderAllCardsTimerOnly() {
       if (timerCountdown) timerCountdown.textContent = state.demoMode ? "00:30" : defaultDurationText;
       if (progressBarFill) progressBarFill.style.width = "0%";
       if (timerSubtext) timerSubtext.textContent = m.type === "dryer" ? "目前空閒，可自訂烘衣時間" : "目前空閒，標準洗滌 30 分鐘";
-        } else if (m.status === "finished") {
-      badgeHTML = `<span class="status-badge badge-finished">🔔 行程結束・待取衣</span>`;
-      const userLabel = m.user ? `<small style="display:block;font-size:0.75rem;color:var(--gray-600);margin-top:2px;">登記人：${escapeHTML(m.user)}</small>` : "";
-      actionBtnHTML = `
-        <button class="btn-action btn-finish" onclick="finishMachineUsage('${m.id}')">
-          ✨ 拿完衣服・結束使用
-        </button>
-        <button class="btn-action btn-helper" onclick="helpRetrieve('${m.id}')">
-          已幫 拿出衣服
-        </button>
-        ${userLabel}
-      `;
-
-      badgeHTML = `<span class="status-badge badge-finished">🔔 行程結束・待取衣</span>`;
-      const userLabel = m.user ? `<small style="display:block;font-size:0.75rem;color:var(--gray-600);margin-top:2px;">登記人：${escapeHTML(m.user)}</small>` : "";
-      actionBtnHTML = `
-        <button class="btn-action btn-finish" onclick="finishMachineUsage('${m.id}')">
-          ✨ 拿完衣服・結束使用
-        </button>
-        <button class="btn-action btn-helper" onclick="helpRetrieve('${m.id}')">
-          已幫 拿出衣服
-        </button>
-        ${userLabel}
-      `;
-
+    } else if (m.status === "finished") {
       if (timerCountdown) timerCountdown.textContent = "00:00";
       if (progressBarFill) progressBarFill.style.width = "100%";
       if (timerSubtext) timerSubtext.textContent = "行程已結束，取衣後請按結束釋放";
@@ -476,19 +417,7 @@ function createMachineCardHTML(m) {
         誤按重設 / 提前取消
       </button>
     `;
-      } else if (m.status === "finished") {
-      badgeHTML = `<span class="status-badge badge-finished">🔔 行程結束・待取衣</span>`;
-      const userLabel = m.user ? `<small style="display:block;font-size:0.75rem;color:var(--gray-600);margin-top:2px;">登記人：${escapeHTML(m.user)}</small>` : "";
-      actionBtnHTML = `
-        <button class="btn-action btn-finish" onclick="finishMachineUsage('${m.id}')">
-          ✨ 拿完衣服・結束使用
-        </button>
-        <button class="btn-action btn-helper" onclick="helpRetrieve('${m.id}')">
-          已幫 拿出衣服
-        </button>
-        ${userLabel}
-      `;
-
+  } else if (m.status === "finished") {
     badgeHTML = `<span class="status-badge badge-finished">🔔 行程結束・待取衣</span>`;
     const userLabel = m.user ? `<small style="display:block;font-size:0.75rem;color:var(--gray-600);margin-top:2px;">登記人：${escapeHTML(m.user)}</small>` : "";
     actionBtnHTML = `
@@ -649,38 +578,14 @@ function closeStartModal() {
   state.activeModalMachineId = null;
 }
 
-  const userNameInput = document.getElementById("userNameInput");
-  const cycleSelect = document.getElementById("cycleSelect");
-  const userName = userNameInput ? userNameInput.value.trim() : "";
-  // Removed PIN handling – no PIN is stored anymore
-  const cycleMinutes = cycleSelect ? parseInt(cycleSelect.value, 10) : (m.type === "washer" ? 30 : 40);
-
-  const now = Date.now();
-  const durationSec = state.demoMode ? cycleMinutes : (cycleMinutes * 60);
-
-  m.status = "running";
-  m.durationMinutes = cycleMinutes;
-  m.startedAt = now;
-  m.endsAt = now + (durationSec * 1000);
-  m.user = userName || "住宿同學";
-
-  closeStartModal();
-  renderAll();
-
-  const userText = userName ? ` (${userName})` : "";
-  const speedText = state.demoMode ? ` [示範快進模式：${cycleMinutes} 秒]` : ` [計時 ${cycleMinutes} 分鐘]`;
-  const actionText = m.type === "dryer" ? "烘衣" : "洗衣";
-  addLog(`🚀 ${m.name}${userText} 開始${actionText}${speedText}，預計 ${formatTime(new Date(m.endsAt))} 完成。`);
+function confirmStartMachine() {
   const machineId = state.activeModalMachineId;
   const m = state.machines.find(item => item.id === machineId);
   if (!m) return;
 
   const userNameInput = document.getElementById("userNameInput");
   const cycleSelect = document.getElementById("cycleSelect");
-  const pinInput = document.getElementById("pinInput");
-  const pin = pinInput ? pinInput.value.trim() : "";
-  // store pin if provided
-  m.pin = pin || null;
+  const userName = userNameInput ? userNameInput.value.trim() : "";
   const cycleMinutes = cycleSelect ? parseInt(cycleSelect.value, 10) : (m.type === "washer" ? 30 : 40);
 
   const now = Date.now();
@@ -701,39 +606,12 @@ function closeStartModal() {
   addLog(`🚀 ${m.name}${userText} 開始${actionText}${speedText}，預計 ${formatTime(new Date(m.endsAt))} 完成。`);
 }
 
-  window.finishMachineUsage = function(machineId) {
-    const m = state.machines.find(item => item.id === machineId);
-    if (!m) return;
-
-    // No PIN check on normal finish – any user can finish after timer ends
-    const prevUser = m.user ? ` (${m.user})` : "";
-    m.status = "idle";
-    m.startedAt = null;
-    m.endsAt = null;
-    m.user = null;
-    m.pin = null;
-    m.helper = null;
-
-    renderAll();
-    addLog(`✨ ${m.name} 衣物已取完${prevUser}，機台釋放為【空閒有位】！`);
-  }; {
+window.finishMachineUsage = function(machineId) {
   const m = state.machines.find(item => item.id === machineId);
   if (!m) return;
 
   const prevUser = m.user ? ` (${m.user})` : "";
-  // Prompt for PIN if set
-  // Removed PIN prompt from finishMachineUsage – finishing is allowed for any user.
-  // Clear PIN after finishing
-  m.pin = null;
-  if (m.pin) {
-    const enteredPin = prompt("輸入 4 位數 PIN 以取消計時");
-    if (enteredPin !== m.pin) {
-      alert("PIN 不正確，無法取消");
-      return;
-    }
-  }
-  // Clear PIN after successful cancel
-  m.pin = null;
+  m.status = "idle";
   m.startedAt = null;
   m.endsAt = null;
   m.user = null;
@@ -743,41 +621,11 @@ function closeStartModal() {
 };
 
 window.cancelMachineRunning = function(machineId) {
-  // 第一次確認
   if (!confirm("確定要取消當前行程並重設為空閒嗎？")) return;
-  // 第二次確認
-  if (!confirm("此操作將立即取消並把機台重設為空閒，真的要執行嗎？")) return;
-
   const m = state.machines.find(item => item.id === machineId);
   if (!m) return;
 
-  // 因已移除 PIN 功能，直接清除相關欄位
   m.status = "idle";
-  m.startedAt = null;
-  m.endsAt = null;
-  m.user = null;
-  m.pin = null;
-
-  renderAll();
-  addLog(`⚠️ ${m.name} 行程已被手動取消重設。`);
-}; {
-  if (!confirm("確定要取消當前行程並重設為空閒嗎？")) return;
-  const m = state.machines.find(item => item.id === machineId);
-  if (!m) return;
-
-  // Prompt for PIN if set
-  // Removed PIN prompt from finishMachineUsage – finishing is allowed for any user.
-  // Clear PIN after finishing
-  m.pin = null;
-  if (m.pin) {
-    const enteredPin = prompt("輸入 4 位數 PIN 以取消計時");
-    if (enteredPin !== m.pin) {
-      alert("PIN 不正確，無法取消");
-      return;
-    }
-  }
-  // Clear PIN after successful cancel
-  m.pin = null;
   m.startedAt = null;
   m.endsAt = null;
   m.user = null;
@@ -821,19 +669,7 @@ window.toggleMachineMaintenance = function(machineId) {
   if (!m) return;
 
   if (m.status === "maintenance") {
-    // Prompt for PIN if set
-  // Removed PIN prompt from finishMachineUsage – finishing is allowed for any user.
-  // Clear PIN after finishing
-  m.pin = null;
-  if (m.pin) {
-    const enteredPin = prompt("輸入 4 位數 PIN 以取消計時");
-    if (enteredPin !== m.pin) {
-      alert("PIN 不正確，無法取消");
-      return;
-    }
-  }
-  // Clear PIN after successful cancel
-  m.pin = null;
+    m.status = "idle";
     m.startedAt = null;
     m.endsAt = null;
     m.user = null;
