@@ -3,9 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>宿洗通 DormWash｜宿舍洗衣機即時使用看板</title>
+  <title>宿洗通 DormWash｜宿舍洗衣房即時使用看板</title>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧺</text></svg>">
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
   <header class="navbar">
@@ -60,7 +63,7 @@
       </div>
     </section>
 
-    <!-- 分類篩選與提示 (取消樓層，全部集中在洗衣房，可切換洗衣機 / 烘衣機) -->
+    <!-- 分類篩選與雲端即時連線狀態標籤 -->
     <section class="filter-bar">
       <div class="filter-group">
         <label for="typeFilter">🏷️ 機台類別篩選：</label>
@@ -70,8 +73,8 @@
           <option value="dryer">♨️ 烘衣機專區 (共 4 台・可選 10～100 分鐘)</option>
         </select>
       </div>
-      <div class="live-sync-badge" title="多分頁即時同步中">
-        <span class="sync-dot"></span> 📍 宿舍洗衣房即時狀態同步中
+      <div class="live-sync-badge" id="cloudSyncBadge" title="已成功連線至 Firebase 雲端即時資料庫">
+        <span class="sync-dot"></span> <span id="cloudSyncText">🟢 跨手機雲端即時連線中 (Live Sync)</span>
       </div>
     </section>
 
@@ -91,14 +94,14 @@
         <div class="guide-step">
           <div class="step-num">1</div>
           <div class="step-content">
-            <h3>查看空閒狀態</h3>
-            <p><strong>6 台洗衣機</strong>與<strong>4 台烘衣機</strong>集中於宿舍洗衣房，綠色代表可直接使用，不用白跑排隊。</p>
+            <h3>查看即時空閒狀態</h3>
+            <p><strong>6 台洗衣機</strong>與<strong>4 台烘衣機</strong>全宿舍手機即時連線同步，綠色代表可直接使用，免白跑排隊。</p>
           </div>
         </div>
         <div class="guide-step">
           <div class="step-num">2</div>
           <div class="step-content">
-            <h3>洗衣固定半小時 / 烘衣自選時間</h3>
+            <h3>洗衣半小時 / 烘衣自選時間</h3>
             <p>洗衣機自動設定 30 分鐘；烘衣機可依衣物量自由選擇 10～100 分鐘（每 10 分鐘一單位）。</p>
           </div>
         </div>
@@ -165,7 +168,7 @@
         <button class="modal-close" id="closeAdminModalBtn">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="text-muted">符合期末專題指南「管理／資料功能」加分項目，可進行洗衣房機台之<strong>新增、查看、編輯維修狀態、刪除</strong>。</p>
+        <p class="text-muted">符合期末專題指南「管理／資料功能」加分項目，變更會即時同步至全體同學手機。</p>
         
         <!-- 新增機台表單 -->
         <div class="admin-form-box">
@@ -226,7 +229,7 @@
       <p class="footer-links">
         <span>6台洗衣機 (30分)</span>・
         <span>4台烘衣機 (10~100分)</span>・
-        <span>無樓層集中洗衣房</span>・
+        <span>Firebase 雲端即時跨手機同步</span>・
         <span>符合期末加分規範</span>
       </p>
     </div>

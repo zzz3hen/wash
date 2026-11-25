@@ -1,15 +1,26 @@
 /**
  * 宿洗通 DormWash - 宿舍洗衣房即時使用看板與洗畢提醒
+ * 🌟 支援 Firebase 雲端即時資料庫 (全宿舍不同手機 / 電腦 100% 跨裝置即時同步)
  * 配置：
- * - 全部機台集中於「宿舍洗衣房」，無樓層之分
+ * - 全部機台集中於「宿舍洗衣房」
  * - 6 台洗衣機：固定 30 分鐘（半小時）
  * - 4 台烘衣機：自選 10～100 分鐘（以 10 分鐘為單位）
- * - 支援示範快進模式、跨分頁同步、Web Audio 提示音、CRUD 管理面板
+ * - 示範快進模式、Web Audio 提示音、桌面通知、CRUD 管理面板
  */
 
-// 預設機台資料（6 台洗衣機 ＋ 4 台烘衣機，全部位於宿舍洗衣房）
+// Firebase 設定
+const firebaseConfig = {
+  apiKey: "AIzaSyCYcX32J1eVbPJFSRdrp00PdX2cddlbL7k",
+  authDomain: "dorm-wash-93aa0.firebaseapp.com",
+  databaseURL: "https://dorm-wash-93aa0-default-rtdb.firebaseio.com",
+  projectId: "dorm-wash-93aa0",
+  storageBucket: "dorm-wash-93aa0.firebasestorage.app",
+  messagingSenderId: "955733127491",
+  appId: "1:955733127491:web:6d0fd6967a9b69c7753ff6"
+};
+
+// 預設機台資料（6 台洗衣機 ＋ 4 台烘衣機）
 const DEFAULT_MACHINES = [
-  // 6 台洗衣機（固定半小時）
   { id: "w-1", name: "#1 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null },
   { id: "w-2", name: "#2 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null },
   { id: "w-3", name: "#3 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null },
@@ -17,83 +28,125 @@ const DEFAULT_MACHINES = [
   { id: "w-5", name: "#5 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null },
   { id: "w-6", name: "#6 洗衣機", location: "宿舍洗衣房", type: "washer", status: "idle", durationMinutes: 30, startedAt: null, endsAt: null, user: null },
 
-  // 4 台烘衣機（可選 10~100 分鐘）
   { id: "d-1", name: "#1 烘衣機", location: "宿舍洗衣房", type: "dryer", status: "idle", durationMinutes: 40, startedAt: null, endsAt: null, user: null },
   { id: "d-2", name: "#2 烘衣機", location: "宿舍洗衣房", type: "dryer", status: "idle", durationMinutes: 40, startedAt: null, endsAt: null, user: null },
   { id: "d-3", name: "#3 烘衣機", location: "宿舍洗衣房", type: "dryer", status: "idle", durationMinutes: 40, startedAt: null, endsAt: null, user: null },
   { id: "d-4", name: "#4 烘衣機", location: "宿舍洗衣房", type: "dryer", status: "idle", durationMinutes: 40, startedAt: null, endsAt: null, user: null }
 ];
 
-// 本地存儲鍵名 (升級為 v4 確保套用最新 6+4 機台配置)
-const STORAGE_KEYS = {
-  MACHINES: "dorm_wash_machines_v4",
-  LOGS: "dorm_wash_logs_v4",
-  DEMO_MODE: "dorm_wash_demo_mode_v4"
-};
+const LOCAL_CACHE_KEY = "dorm_wash_firebase_cache_v1";
 
 // 狀態管理
 let state = {
-  machines: [],
-  logs: [],
+  machines: JSON.parse(JSON.stringify(DEFAULT_MACHINES)),
+  logs: [
+    { id: "log-init", time: formatTime(new Date()), text: "系統啟動：正在連線 Firebase 雲端即時資料庫..." }
+  ],
   demoMode: false,
-  filterType: "all", // all | washer | dryer
-  activeModalMachineId: null
+  filterType: "all",
+  activeModalMachineId: null,
+  isCloudConnected: false
 };
 
-// 跨分頁同調廣播通道
-let syncChannel = null;
+// 初始化 Firebase
+let db = null;
+let laundryRef = null;
+
 try {
-  syncChannel = new BroadcastChannel("dorm_wash_sync_bus_v4");
-  syncChannel.onmessage = (event) => {
-    if (event.data && event.data.type === "STATE_UPDATED") {
-      loadStateFromStorage();
-      renderAll();
-    }
-  };
-} catch (e) {
-  console.log("BroadcastChannel not supported, using storage events.");
+  if (typeof firebase !== "undefined") {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    laundryRef = db.ref("laundry_room");
+  }
+} catch (err) {
+  console.error("Firebase 初始化失敗，將使用本機模式", err);
 }
 
-window.addEventListener("storage", (e) => {
-  if (e.key === STORAGE_KEYS.MACHINES || e.key === STORAGE_KEYS.LOGS || e.key === STORAGE_KEYS.DEMO_MODE) {
-    loadStateFromStorage();
+// 監聽 Firebase 雲端資料變更（當任何一台手機或電腦改動時，全體裝置瞬間更新）
+function initCloudSync() {
+  if (!laundryRef) {
+    updateCloudBadge(false);
+    loadFromLocalStorage();
     renderAll();
+    return;
   }
-});
 
-// 載入狀態
-function loadStateFromStorage() {
-  try {
-    const savedMachines = localStorage.getItem(STORAGE_KEYS.MACHINES);
-    state.machines = savedMachines ? JSON.parse(savedMachines) : JSON.parse(JSON.stringify(DEFAULT_MACHINES));
-    
-    const savedLogs = localStorage.getItem(STORAGE_KEYS.LOGS);
-    state.logs = savedLogs ? JSON.parse(savedLogs) : [
-      { id: "log-init", time: formatTime(new Date()), text: "系統就緒：已載入宿舍洗衣房 6 台洗衣機 ＋ 4 台烘衣機狀態。" }
-    ];
+  // 監聽連線狀態
+  db.ref(".info/connected").on("value", (snap) => {
+    state.isCloudConnected = snap.val() === true;
+    updateCloudBadge(state.isCloudConnected);
+  });
 
-    const savedDemo = localStorage.getItem(STORAGE_KEYS.DEMO_MODE);
-    state.demoMode = savedDemo ? JSON.parse(savedDemo) : false;
-  } catch (err) {
-    console.error("載入狀態失敗，重設為預設值", err);
-    state.machines = JSON.parse(JSON.stringify(DEFAULT_MACHINES));
-    state.logs = [];
-    state.demoMode = false;
+  // 監聽資料即時變更
+  laundryRef.on("value", (snapshot) => {
+    const data = snapshot.val();
+    if (data && Array.isArray(data.machines)) {
+      state.machines = data.machines;
+      if (Array.isArray(data.logs)) state.logs = data.logs;
+      if (typeof data.demoMode === "boolean") state.demoMode = data.demoMode;
+      saveToLocalStorage();
+      renderAll();
+    } else {
+      // 資料庫為空時（初次啟動），自動將預設機台寫入雲端
+      saveStateToCloud();
+    }
+  }, (err) => {
+    console.error("Firebase 讀取失敗:", err);
+    updateCloudBadge(false);
+  });
+}
+
+// 儲存狀態至雲端（推播給所有手機）
+function saveStateToCloud() {
+  saveToLocalStorage();
+  if (laundryRef) {
+    laundryRef.set({
+      machines: state.machines,
+      logs: state.logs,
+      demoMode: state.demoMode,
+      updatedAt: Date.now()
+    }).catch(err => {
+      console.error("同步至雲端失敗:", err);
+    });
   }
 }
 
-// 儲存狀態並廣播
-function saveStateAndBroadcast() {
+// 本機離線快取
+function saveToLocalStorage() {
   try {
-    localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(state.machines));
-    localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(state.logs));
-    localStorage.setItem(STORAGE_KEYS.DEMO_MODE, JSON.stringify(state.demoMode));
-    
-    if (syncChannel) {
-      syncChannel.postMessage({ type: "STATE_UPDATED" });
+    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify({
+      machines: state.machines,
+      logs: state.logs,
+      demoMode: state.demoMode
+    }));
+  } catch (e) {}
+}
+
+function loadFromLocalStorage() {
+  try {
+    const cached = localStorage.getItem(LOCAL_CACHE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.machines) state.machines = parsed.machines;
+      if (parsed.logs) state.logs = parsed.logs;
+      if (typeof parsed.demoMode === "boolean") state.demoMode = parsed.demoMode;
     }
-  } catch (err) {
-    console.error("儲存失敗", err);
+  } catch (e) {}
+}
+
+function updateCloudBadge(isConnected) {
+  const badge = document.getElementById("cloudSyncBadge");
+  const text = document.getElementById("cloudSyncText");
+  if (!badge || !text) return;
+
+  if (isConnected) {
+    text.textContent = "🟢 跨手機雲端即時連線中 (Live Sync)";
+    badge.style.background = "var(--gray-100)";
+    badge.style.color = "var(--gray-700)";
+  } else {
+    text.textContent = "⚪ 本機離線運作中 (連線重試中...)";
+    badge.style.background = "#fef2f2";
+    badge.style.color = "#dc2626";
   }
 }
 
@@ -105,7 +158,7 @@ function addLog(text) {
   };
   state.logs.unshift(newLog);
   if (state.logs.length > 30) state.logs.pop();
-  saveStateAndBroadcast();
+  saveStateToCloud();
 }
 
 function formatTime(date) {
@@ -205,13 +258,21 @@ function timerTick() {
         const userNotice = m.user ? ` (${m.user})` : "";
         const alertMsg = `${m.name}${userNotice} ${actionLabel}行程已完成！請盡速前往洗衣房取衣。`;
         sendDesktopNotification("🧺 行程結束囉！", alertMsg);
-        addLog(`🔔 【洗畢提醒】${alertMsg}`);
+        
+        // 新增日誌
+        const newLog = {
+          id: "log-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
+          time: formatTime(new Date()),
+          text: `🔔 【洗畢提醒】${alertMsg}`
+        };
+        state.logs.unshift(newLog);
+        if (state.logs.length > 30) state.logs.pop();
       }
     }
   });
 
   if (stateChanged) {
-    saveStateAndBroadcast();
+    saveStateToCloud();
   }
   renderAllCardsTimerOnly();
   updateSummaryStats();
@@ -229,7 +290,6 @@ function renderAll() {
   if (demoSwitch) demoSwitch.checked = state.demoMode;
 }
 
-// 統計資訊更新
 function updateSummaryStats() {
   let total = state.machines.length;
   let idle = 0;
@@ -257,7 +317,6 @@ function updateSummaryStats() {
   if (elMaint) elMaint.textContent = maintenance;
 }
 
-// 動態更新每台卡片的計時與進度條
 function renderAllCardsTimerOnly() {
   const now = Date.now();
 
@@ -301,7 +360,6 @@ function renderAllCardsTimerOnly() {
   });
 }
 
-// 機台網格渲染
 function renderMachineGrid() {
   const grid = document.getElementById("machineGrid");
   if (!grid) return;
@@ -478,7 +536,6 @@ function escapeHTML(str) {
 
 /* ================= 使用者操作事件 ================= */
 
-// 開啟啟動確認彈窗 (針對洗衣機與烘衣機動態產生行程時間選項)
 window.openStartModal = function(machineId) {
   const m = state.machines.find(item => item.id === machineId);
   if (!m) return;
@@ -497,12 +554,10 @@ window.openStartModal = function(machineId) {
 
   if (cycleSelect && cycleLabel) {
     if (m.type === "washer") {
-      // 6 台洗衣機：固定 30 分鐘
       cycleLabel.textContent = "洗滌行程時間 (固定半小時)：";
       cycleSelect.innerHTML = `<option value="30" selected>標準洗滌 (30 分鐘)</option>`;
       cycleSelect.disabled = true;
     } else {
-      // 4 台烘衣機：最少 10 分鐘，每 10 分鐘一單位，最高 100 分鐘
       cycleLabel.textContent = "烘衣時間選擇 (10～100 分鐘)：";
       cycleSelect.disabled = false;
       let optionsHTML = "";
@@ -523,7 +578,6 @@ function closeStartModal() {
   state.activeModalMachineId = null;
 }
 
-// 確認啟動計時
 function confirmStartMachine() {
   const machineId = state.activeModalMachineId;
   const m = state.machines.find(item => item.id === machineId);
@@ -535,7 +589,6 @@ function confirmStartMachine() {
   const cycleMinutes = cycleSelect ? parseInt(cycleSelect.value, 10) : (m.type === "washer" ? 30 : 40);
 
   const now = Date.now();
-  // 若為示範快進模式，每 1 分鐘轉為 1 秒 (例如 30分 = 30秒，50分 = 50秒)
   const durationSec = state.demoMode ? cycleMinutes : (cycleMinutes * 60);
 
   m.status = "running";
@@ -545,7 +598,6 @@ function confirmStartMachine() {
   m.user = userName || "住宿同學";
 
   closeStartModal();
-  saveStateAndBroadcast();
   renderAll();
 
   const userText = userName ? ` (${userName})` : "";
@@ -554,7 +606,6 @@ function confirmStartMachine() {
   addLog(`🚀 ${m.name}${userText} 開始${actionText}${speedText}，預計 ${formatTime(new Date(m.endsAt))} 完成。`);
 }
 
-// 結束使用 (拿完衣服後釋放機台位置)
 window.finishMachineUsage = function(machineId) {
   const m = state.machines.find(item => item.id === machineId);
   if (!m) return;
@@ -565,13 +616,10 @@ window.finishMachineUsage = function(machineId) {
   m.endsAt = null;
   m.user = null;
 
-  saveStateAndBroadcast();
   renderAll();
-
   addLog(`✨ ${m.name} 衣物已取完${prevUser}，機台釋放為【空閒有位】！`);
 };
 
-// 誤按取消
 window.cancelMachineRunning = function(machineId) {
   if (!confirm("確定要取消當前行程並重設為空閒嗎？")) return;
   const m = state.machines.find(item => item.id === machineId);
@@ -582,14 +630,12 @@ window.cancelMachineRunning = function(machineId) {
   m.endsAt = null;
   m.user = null;
 
-  saveStateAndBroadcast();
   renderAll();
   addLog(`⚠️ ${m.name} 行程已被手動取消重設。`);
 };
 
 /* ================= CRUD 管理事件 ================= */
 
-// 新增機台
 function handleAddMachine(e) {
   e.preventDefault();
   const nameInput = document.getElementById("newMachineName");
@@ -614,12 +660,10 @@ function handleAddMachine(e) {
   state.machines.push(newMachine);
   nameInput.value = "";
 
-  saveStateAndBroadcast();
   renderAll();
   addLog(`➕ 管理員新增了機台：${name} (${type === "dryer" ? "烘衣機" : "洗衣機"})`);
 }
 
-// 切換維修狀態
 window.toggleMachineMaintenance = function(machineId) {
   const m = state.machines.find(item => item.id === machineId);
   if (!m) return;
@@ -638,40 +682,32 @@ window.toggleMachineMaintenance = function(machineId) {
     addLog(`⚠️ ${m.name} 經通報故障，已標記為【維修中】暫停服務。`);
   }
 
-  saveStateAndBroadcast();
   renderAll();
 };
 
-// 刪除機台
 window.deleteMachine = function(machineId) {
   const m = state.machines.find(item => item.id === machineId);
   if (!m) return;
   if (!confirm(`確定要刪除 ${m.name} 嗎？此操作無法復原。`)) return;
 
   state.machines = state.machines.filter(item => item.id !== machineId);
-  saveStateAndBroadcast();
   renderAll();
   addLog(`🗑️ 管理員刪除了機台：${m.name}`);
 };
 
-// 重設預設 10 台機台 (6 洗衣 + 4 烘衣)
 function handleResetDefaults() {
   if (!confirm("確定要重設為預設機台資料（6台洗衣機 ＋ 4台烘衣機）嗎？")) return;
   state.machines = JSON.parse(JSON.stringify(DEFAULT_MACHINES));
-  saveStateAndBroadcast();
   renderAll();
   addLog("🔄 管理員將機台資料重設為標準 6 洗衣 ＋ 4 烘衣配置。");
 }
 
 /* ================= 頁面事件監聽綁定 ================= */
 document.addEventListener("DOMContentLoaded", () => {
-  loadStateFromStorage();
-  renderAll();
+  initCloudSync();
 
-  // 每秒更新計時器
   setInterval(timerTick, 1000);
 
-  // 機台類別篩選 (全部 / 洗衣機 / 烘衣機)
   const typeFilter = document.getElementById("typeFilter");
   if (typeFilter) {
     typeFilter.addEventListener("change", (e) => {
@@ -680,12 +716,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 快進示範模式切換
   const demoSwitch = document.getElementById("demoModeSwitch");
   if (demoSwitch) {
     demoSwitch.addEventListener("change", (e) => {
       state.demoMode = e.target.checked;
-      saveStateAndBroadcast();
       renderAllCardsTimerOnly();
       const demoNoticeBox = document.getElementById("demoNoticeBox");
       if (demoNoticeBox) demoNoticeBox.style.display = state.demoMode ? "block" : "none";
@@ -693,13 +727,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 提醒通知按鈕
   const notifyBtn = document.getElementById("notifyBtn");
   if (notifyBtn) {
     notifyBtn.addEventListener("click", requestNotificationPermission);
   }
 
-  // 啟動彈窗確認與取消
   const confirmStartBtn = document.getElementById("confirmStartBtn");
   if (confirmStartBtn) confirmStartBtn.addEventListener("click", confirmStartMachine);
 
@@ -709,7 +741,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeStartModalBtn = document.getElementById("closeStartModalBtn");
   if (closeStartModalBtn) closeStartModalBtn.addEventListener("click", closeStartModal);
 
-  // 管理彈窗開關
   const adminModal = document.getElementById("adminModal");
   const openAdminBtn = document.getElementById("openAdminBtn");
   const closeAdminModalBtn = document.getElementById("closeAdminModalBtn");
@@ -729,20 +760,17 @@ document.addEventListener("DOMContentLoaded", () => {
   if (closeAdminModalBtn) closeAdminModalBtn.addEventListener("click", closeAdmin);
   if (finishAdminBtn) finishAdminBtn.addEventListener("click", closeAdmin);
 
-  // 表單送出 (新增機台)
   const addMachineForm = document.getElementById("addMachineForm");
   if (addMachineForm) addMachineForm.addEventListener("submit", handleAddMachine);
 
-  // 重設按鈕
   const resetDefaultsBtn = document.getElementById("resetDefaultsBtn");
   if (resetDefaultsBtn) resetDefaultsBtn.addEventListener("click", handleResetDefaults);
 
-  // 清空紀錄
   const clearLogsBtn = document.getElementById("clearLogsBtn");
   if (clearLogsBtn) {
     clearLogsBtn.addEventListener("click", () => {
       state.logs = [];
-      saveStateAndBroadcast();
+      saveStateToCloud();
       renderActivityLogs();
     });
   }
