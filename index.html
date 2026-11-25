@@ -144,6 +144,13 @@
 
         <div class="form-group" id="cycleGroup">
           <label for="cycleSelect" id="cycleLabel">使用時間：</label>
+          <select id="cycleSelect" class="form-select"></select>
+        </div>
+        <div class="form-group" id="pinGroup">
+          <label for="pinInput">設定 4 位數 PIN（選填，僅限取消）:</label>
+          <input type="password" id="pinInput" class="form-input" maxlength="4" pattern="\d{4}" placeholder="例: 1234" />
+        </div>
+          <label for="cycleSelect" id="cycleLabel">使用時間：</label>
           <select id="cycleSelect" class="form-select">
             <!-- 根據洗衣機或烘衣機由 JS 動態生成選項 -->
           </select>
